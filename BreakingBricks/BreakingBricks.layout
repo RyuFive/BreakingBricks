@@ -2,15 +2,31 @@
 <CodeBlocks_layout_file>
 	<FileVersion major="1" minor="0" />
 	<ActiveTarget name="Debug" />
-	<File name="main.c" open="1" top="1" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="main.c" open="1" top="1" tabpos="1" split="0" active="1" splitpos="0" zoom_1="2" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="1677" topLine="23" />
+			<Cursor1 position="514" topLine="16" />
 		</Cursor>
 		<Folding>
-			<Collapse line="6" />
+			<Collapse line="15" />
+			<Collapse line="25" />
+			<Collapse line="36" />
 			<Collapse line="40" />
-			<Collapse line="47" />
+			<Collapse line="48" />
+			<Collapse line="67" />
+			<Collapse line="75" />
+			<Collapse line="82" />
+			<Collapse line="104" />
+			<Collapse line="115" />
+			<Collapse line="120" />
+			<Collapse line="130" />
+			<Collapse line="134" />
+			<Collapse line="138" />
+			<Collapse line="143" />
+			<Collapse line="171" />
+			<Collapse line="179" />
+			<Collapse line="189" />
+			<Collapse line="197" />
 		</Folding>
 	</File>
-	<EditorTabsLayout layout="090a9588583d8f9b0000559900000002=*0;BreakingBricks:main.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=680;besth=229;minw=680;minh=229;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=090a9588583d8f9b0000559900000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
+	<EditorTabsLayout layout="09173e48583d9a9b00001dd000000002=*0;BreakingBricks:main.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=680;besth=316;minw=680;minh=316;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=09173e48583d9a9b00001dd000000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
 </CodeBlocks_layout_file>

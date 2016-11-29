@@ -1,8 +1,10 @@
 # depslib dependency file v1.0
-1480433806 source:c:\users\ryufive\documents\github\breakingbricks\breakingbricks\main.c
-	"SDL.h"
+1480438560 source:c:\users\ryufive\documents\github\breakingbricks\breakingbricks\main.c
 	<stdio.h>
 	<stdlib.h>
+	<conio.h>
 	<time.h>
+	"SDL.h"
 	<SDL_image.h>
+	<SDL_TTF.h>
 
