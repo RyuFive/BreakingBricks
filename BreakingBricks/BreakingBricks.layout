@@ -4,33 +4,45 @@
 	<ActiveTarget name="Debug" />
 	<File name="main.c" open="1" top="1" tabpos="1" split="0" active="1" splitpos="0" zoom_1="2" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="6623" topLine="38" />
+			<Cursor1 position="7769" topLine="121" />
 		</Cursor>
 		<Folding>
-			<Collapse line="24" />
-			<Collapse line="31" />
-			<Collapse line="47" />
+			<Collapse line="16" />
+			<Collapse line="22" />
+			<Collapse line="26" />
+			<Collapse line="33" />
+			<Collapse line="45" />
+			<Collapse line="49" />
 			<Collapse line="51" />
+			<Collapse line="57" />
 			<Collapse line="59" />
-			<Collapse line="61" />
-			<Collapse line="66" />
-			<Collapse line="72" />
-			<Collapse line="78" />
-			<Collapse line="86" />
+			<Collapse line="64" />
+			<Collapse line="70" />
+			<Collapse line="76" />
+			<Collapse line="84" />
+			<Collapse line="91" />
+			<Collapse line="92" />
 			<Collapse line="93" />
-			<Collapse line="137" />
-			<Collapse line="142" />
-			<Collapse line="168" />
-			<Collapse line="175" />
-			<Collapse line="180" />
-			<Collapse line="186" />
-			<Collapse line="214" />
-			<Collapse line="227" />
-			<Collapse line="235" />
-			<Collapse line="245" />
-			<Collapse line="254" />
-			<Collapse line="255" />
+			<Collapse line="96" />
+			<Collapse line="97" />
+			<Collapse line="98" />
+			<Collapse line="102" />
+			<Collapse line="106" />
+			<Collapse line="110" />
+			<Collapse line="114" />
+			<Collapse line="115" />
+			<Collapse line="116" />
+			<Collapse line="120" />
+			<Collapse line="124" />
+			<Collapse line="128" />
+			<Collapse line="135" />
+			<Collapse line="147" />
+			<Collapse line="172" />
+			<Collapse line="209" />
+			<Collapse line="263" />
+			<Collapse line="273" />
+			<Collapse line="274" />
 		</Folding>
 	</File>
-	<EditorTabsLayout layout="09117cb8583e42e100002d5600000002=*0;BreakingBricks:main.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=680;besth=316;minw=680;minh=316;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=09117cb8583e42e100002d5600000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
+	<EditorTabsLayout layout="0924ee70583e7abe000020e000000002=*0;BreakingBricks:main.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=680;besth=316;minw=680;minh=316;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=0924ee70583e7abe000020e000000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
 </CodeBlocks_layout_file>

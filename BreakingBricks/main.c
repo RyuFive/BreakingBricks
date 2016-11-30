@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <conio.h>
 #include <time.h>
+#include <stdbool.h>
 #include "SDL.h"
 #include <SDL_image.h>
 #include <SDL_TTF.h>
@@ -11,38 +12,36 @@ SDL_Renderer * renderer = NULL;
 SDL_Event event;
 SDL_Texture * textures[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 TTF_Font * font = NULL;
-int running = 1;
+bool running = true;
+int collision = 0;
 
 struct Ball{
-    int posX;
-    int posY;
+    SDL_Rect box;
     int velX;
     int velY;
-    int width;
-    int height;
     SDL_Texture * pic;
 };
 struct Screen{
-    int posX;
-    int posY;
-    int width;
-    int height;
+    SDL_Rect box;
     SDL_Texture * pic;
 };
 struct Bat{
-    int posX;
-    int poxY;
-    int width;
-    int height;
+    SDL_Rect box;
     int speed;
     int move[4];
     SDL_Texture * pic;
 
 };
+struct Brick{
+    SDL_Rect box;
+    SDL_Texture * pic;
+    struct Brick * next;
+};
 
 struct Ball * ball;
 struct Screen * screen;
 struct Bat * bat;
+struct Brick * brick;
 
 
 void logSDLError(const char *  msg){
@@ -107,7 +106,7 @@ void handleEvents(){
                     break;
                 }
                 case SDLK_x:{
-                    running = 0;
+                    running = false;
                     break;
                 }
                 default:{
@@ -125,7 +124,7 @@ void handleEvents(){
                     break;
                 }
                 case SDLK_x:{
-                    running = 0;
+                    running = false;
                     break;
                 }
                 default:{
@@ -142,36 +141,50 @@ void loadTextures(){
 }
 void collisionDetection(){
     //Collision with walls
-    if (ball->posX == screen->posX || ball->posX == screen->width)
+    if (ball->box.x == screen->box.x || ball->box.x + ball->box.w == screen->box.w)
     {
         ball->velX = ball->velX * -1;
     }
-    if (ball->posY == screen->posY || ball->posY == screen->height)
+    if (ball->box.y == screen->box.y || ball->box.y + ball->box.h == screen->box.h)
     {
         ball->velY = ball->velY * -1;
     }
-    //Collision with bat
-    if (ball->posY + ball->height == bat->posX){
-        if (ball->posX + ball->width > bat->posX && ball->posX + ball->width < bat->posX + bat->width){
-            ball->velY *= -1;
-        }
-        if (ball->posX > bat->posX && ball->posX < bat->posX + bat->width){
-            ball->velY *= -1;
-        }
-    }
-
 }
 void moveBall(){
-    ball->posX = ball->posX + ball->velX;
-    ball->posY = ball->posY + ball->velY;
+    ball->box.x = ball->box.x + ball->velX;
+    if (SDL_HasIntersection(&(ball->box), &(bat->box))){
+        ball->velX *= -1;
+        ball->box.x = ball->box.x + ball->velX;
+    }
+    struct Brick * temp = brick;
+    while (temp != NULL){
+        if (SDL_HasIntersection(&(ball->box), &(temp->box))){
+            ball->velX *= -1;
+            ball->box.x = ball->box.x + ball->velX;
+        }
+        temp = temp->next;
+    }
+    ball->box.y = ball->box.y + ball->velY;
+    if (SDL_HasIntersection(&(ball->box), &(temp->box))){
+        ball->velY *= -1;
+        ball->box.y = ball->box.y + ball->velY;
+    }
+    temp = brick;
+    while (temp != NULL){
+        if (SDL_HasIntersection(&(ball->box), &(temp->box))){
+            ball->velY *= -1;
+            ball->box.y = ball->box.y + ball->velY;
+        }
+        temp = temp->next;
+    }
 
 }
 void moveBat(){
-    if (bat->posX - bat->move[2] < screen->posX || bat->posX + bat->move[3] + bat->width > screen->width){
+    if (bat->box.x - bat->move[2] < screen->box.x || bat->box.x + bat->move[3] + bat->box.w > screen->box.w){
         return;
     }
-    bat->posX -= bat->move[2];
-    bat->posX += bat->move[3];
+    bat->box.x -= bat->move[2];
+    bat->box.x += bat->move[3];
 }
 void update(){
     collisionDetection();
@@ -180,8 +193,13 @@ void update(){
 }
 void render(){
     SDL_RenderClear(renderer);
-    renderTextureScale(ball->pic, ball->posX, ball->posY, ball->width, ball->height);
-    renderTextureScale(bat->pic, bat->posX, bat->poxY, bat->width, bat->height);
+    struct Brick * temp = brick;
+    while (temp != NULL){
+        renderTextureScale(temp->pic, temp->box.x, temp->box.y, temp->box.w, temp->box.h);
+        temp = temp->next;
+    }
+    renderTextureScale(bat->pic, bat->box.x, bat->box.y, bat->box.w, bat->box.h);
+    renderTextureScale(ball->pic, ball->box.x, ball->box.y, ball->box.w, ball->box.h);
     SDL_RenderPresent(renderer);
 }
 void initSDL(){
@@ -198,7 +216,7 @@ void initSDL(){
         logSDLError("TTF_Init");
         SDL_Quit();
     }
-    window = SDL_CreateWindow("An SDL2 window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen->width, screen->height, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("An SDL2 window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen->box.w, screen->box.h, SDL_WINDOW_OPENGL);
     if (window == NULL){
         logSDLError("CreateWindow");
         SDL_Quit();
@@ -214,10 +232,10 @@ void initSDL(){
 }
 void initBat(){
     bat = (struct Bat *)malloc(sizeof(struct Bat));
-    bat->width = 100;
-    bat->height = 15;
-    bat->posX = screen->width / 2 - bat->width / 2;
-    bat->poxY = screen->height - 30;
+    bat->box.w = 100;
+    bat->box.h = 15;
+    bat->box.x = screen->box.w / 2 - bat->box.w / 2;
+    bat->box.y = screen->box.h - 30;
     bat->speed = 1;
     bat->move[0] = 0;
     bat->move[1] = 0;
@@ -227,21 +245,37 @@ void initBat(){
 }
 void initScreen(){
     screen = (struct Screen *)malloc(sizeof(struct Screen));
-    screen->posX = 0;
-    screen->posY = 0;
-    screen->width = 800;
-    screen->height = 600;
+    screen->box.x = 0;
+    screen->box.y = 0;
+    screen->box.w = 800;
+    screen->box.h = 600;
     screen->pic = NULL;
 }
 void initBall(){
     ball = (struct Ball *)malloc(sizeof(struct Ball));
-    ball->width = 8;
-    ball->height = 8;
-    ball->posX = screen->width / 2 - ball->width / 2;
-    ball->posY = screen->height / 2 - ball->height / 2;
+    ball->box.w = 16;
+    ball->box.h = 16;
+    ball->box.x = screen->box.w / 2 - ball->box.w / 2;
+    ball->box.y = screen->box.h / 2 - ball->box.h / 2;
     ball->velX = 1;
     ball->velY = 1;
     ball->pic = textures[0];
+}
+void initBrick(){
+    for (int i = 10; i < 800; i += 100 ){
+        for (int j = 10; j < 300; j += 30){
+            struct Brick * ptr = (struct Brick *)malloc(sizeof(struct Brick));
+            ptr->box.x = i;
+            ptr->box.y = j;
+            ptr->box.w = 80;
+            ptr->box.h = 20;
+            ptr->pic = textures[2];
+            ptr->next = brick;
+            brick = ptr;
+            j += 10;
+        }
+
+    }
 }
 void initEverything(){
     time_t t;
@@ -249,6 +283,7 @@ void initEverything(){
     initScreen();
     initSDL(); //INIT SDL,WINDOW,RENDERER
     loadTextures();
+    initBrick();
     initBall();
     initBat();
 }
@@ -263,16 +298,17 @@ void killEverything(){
     IMG_Quit();
     SDL_Quit();
 }
-
-int main(int argc, char* argv[]){
-    initEverything();
-
+void gameLoop(){
     while(running){
         handleEvents();
         update();
         render();
     }
+}
 
+int main(int argc, char* argv[]){
+    initEverything();
+    gameLoop();
     killEverything();
     return 0;
 }
