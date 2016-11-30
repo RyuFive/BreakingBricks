@@ -36,12 +36,13 @@ struct Brick{
     SDL_Rect box;
     SDL_Texture * pic;
     struct Brick * next;
+    struct Brick * prev;
 };
 
-struct Ball * ball;
-struct Screen * screen;
-struct Bat * bat;
-struct Brick * brick;
+struct Ball * ball = NULL;
+struct Screen * screen = NULL;
+struct Bat * bat = NULL;
+struct Brick * brick = NULL;
 
 
 void logSDLError(const char *  msg){
@@ -150,6 +151,23 @@ void collisionDetection(){
         ball->velY = ball->velY * -1;
     }
 }
+void deleteBrick(struct Brick * del){
+    if (del->next == NULL && del->prev == NULL){
+        brick = NULL;
+    }
+    else if (del->prev == NULL){
+        brick = del->next;
+        del->next->prev = NULL;
+    }
+    else if (del->next == NULL){
+        del->prev->next = NULL;
+    }
+    else{
+        del->prev->next = del->next;
+        del->next->prev = del->prev;
+    }
+    free(del);
+}
 void moveBall(){
     ball->box.x = ball->box.x + ball->velX;
     if (SDL_HasIntersection(&(ball->box), &(bat->box))){
@@ -161,6 +179,8 @@ void moveBall(){
         if (SDL_HasIntersection(&(ball->box), &(temp->box))){
             ball->velX *= -1;
             ball->box.x = ball->box.x + ball->velX;
+            struct Brick * del = temp;
+            deleteBrick(del);
         }
         temp = temp->next;
     }
@@ -174,10 +194,11 @@ void moveBall(){
         if (SDL_HasIntersection(&(ball->box), &(temp->box))){
             ball->velY *= -1;
             ball->box.y = ball->box.y + ball->velY;
+            struct Brick * del = temp;
+            deleteBrick(del);
         }
         temp = temp->next;
     }
-
 }
 void moveBat(){
     if (bat->box.x - bat->move[2] < screen->box.x || bat->box.x + bat->move[3] + bat->box.w > screen->box.w){
@@ -270,7 +291,11 @@ void initBrick(){
             ptr->box.w = 80;
             ptr->box.h = 20;
             ptr->pic = textures[2];
+            if (brick != NULL){
+                brick->prev = ptr;
+            }
             ptr->next = brick;
+            ptr->prev = NULL;
             brick = ptr;
             j += 10;
         }
