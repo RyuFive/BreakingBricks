@@ -3,6 +3,7 @@
 #include <conio.h>
 #include <time.h>
 #include <stdbool.h>
+#include <string.h>
 #include "SDL.h"
 #include <SDL_image.h>
 #include <SDL_TTF.h>
@@ -14,6 +15,8 @@ SDL_Texture * textures[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NU
 TTF_Font * font = NULL;
 bool running = true;
 int collision = 0;
+float frames = 5;
+float waitTime;
 
 struct Ball{
     SDL_Rect box;
@@ -42,7 +45,7 @@ struct Brick{
 struct Ball * ball = NULL;
 struct Screen * screen = NULL;
 struct Bat * bat = NULL;
-struct Brick * brick = NULL;
+struct Brick * brickHead = NULL;
 
 
 void logSDLError(const char *  msg){
@@ -90,6 +93,9 @@ void renderTexture(SDL_Texture * texture, int x, int y){
     rect.y = y;
     SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
     SDL_RenderCopy(renderer, texture, NULL, &rect);
+}
+void insertBrick(){ //EMPTY
+
 }
 void handleEvents(){
     while (SDL_PollEvent(&event)){
@@ -153,10 +159,10 @@ void collisionDetection(){
 }
 void deleteBrick(struct Brick * del){
     if (del->next == NULL && del->prev == NULL){
-        brick = NULL;
+        brickHead = NULL;
     }
     else if (del->prev == NULL){
-        brick = del->next;
+        brickHead = del->next;
         del->next->prev = NULL;
     }
     else if (del->next == NULL){
@@ -169,35 +175,42 @@ void deleteBrick(struct Brick * del){
     free(del);
 }
 void moveBall(){
+    bool horizontalCollision = false;
+    bool verticalCollision = false;
     ball->box.x = ball->box.x + ball->velX;
     if (SDL_HasIntersection(&(ball->box), &(bat->box))){
-        ball->velX *= -1;
-        ball->box.x = ball->box.x + ball->velX;
+        horizontalCollision = true;
     }
-    struct Brick * temp = brick;
+    struct Brick * temp = brickHead;
     while (temp != NULL){
         if (SDL_HasIntersection(&(ball->box), &(temp->box))){
-            ball->velX *= -1;
-            ball->box.x = ball->box.x + ball->velX;
+            horizontalCollision = true;
             struct Brick * del = temp;
             deleteBrick(del);
         }
         temp = temp->next;
     }
     ball->box.y = ball->box.y + ball->velY;
-    if (SDL_HasIntersection(&(ball->box), &(temp->box))){
-        ball->velY *= -1;
-        ball->box.y = ball->box.y + ball->velY;
+    if (SDL_HasIntersection(&(ball->box), &(bat->box))){
+        verticalCollision = true;
     }
-    temp = brick;
+    temp = brickHead;
     while (temp != NULL){
         if (SDL_HasIntersection(&(ball->box), &(temp->box))){
-            ball->velY *= -1;
-            ball->box.y = ball->box.y + ball->velY;
+            verticalCollision = true;
             struct Brick * del = temp;
             deleteBrick(del);
         }
         temp = temp->next;
+    }
+    if (horizontalCollision){
+        ball->box.x = ball->box.x - ball->velX;
+        ball->velX *= -1;
+    }
+    else if (verticalCollision){
+        ball->box.x = ball->box.x - ball->velX;
+        ball->box.y = ball->box.y - ball->velY;
+        ball->velY *= -1;
     }
 }
 void moveBat(){
@@ -214,7 +227,7 @@ void update(){
 }
 void render(){
     SDL_RenderClear(renderer);
-    struct Brick * temp = brick;
+    struct Brick * temp = brickHead;
     while (temp != NULL){
         renderTextureScale(temp->pic, temp->box.x, temp->box.y, temp->box.w, temp->box.h);
         temp = temp->next;
@@ -222,6 +235,11 @@ void render(){
     renderTextureScale(bat->pic, bat->box.x, bat->box.y, bat->box.w, bat->box.h);
     renderTextureScale(ball->pic, ball->box.x, ball->box.y, ball->box.w, ball->box.h);
     SDL_RenderPresent(renderer);
+}
+void fps(){
+    while (!SDL_TICKS_PASSED(SDL_GetTicks(), waitTime)) {
+    }
+    printf("%f\n", 1000.f/frames);
 }
 void initSDL(){
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -278,28 +296,31 @@ void initBall(){
     ball->box.h = 16;
     ball->box.x = screen->box.w / 2 - ball->box.w / 2;
     ball->box.y = screen->box.h / 2 - ball->box.h / 2;
-    ball->velX = 1;
-    ball->velY = 1;
+    ball->velX = rand() % 3 - 2;
+    ball->velY = rand() % 3 - 2;
+    while (ball->velX == 0 || ball->velY == 0){
+        ball->velX = rand() % 3 - 2;
+        ball->velY = rand() % 3 - 2;
+    }
     ball->pic = textures[0];
 }
 void initBrick(){
-    for (int i = 10; i < 800; i += 100 ){
-        for (int j = 10; j < 300; j += 30){
+    for (int i = 40; i < 760; i += 80 ){
+        for (int j = 10; j < 250; j += 20){
             struct Brick * ptr = (struct Brick *)malloc(sizeof(struct Brick));
             ptr->box.x = i;
             ptr->box.y = j;
             ptr->box.w = 80;
             ptr->box.h = 20;
             ptr->pic = textures[2];
-            if (brick != NULL){
-                brick->prev = ptr;
+            if (brickHead != NULL){
+                brickHead->prev = ptr;
             }
-            ptr->next = brick;
+            ptr->next = brickHead;
             ptr->prev = NULL;
-            brick = ptr;
+            brickHead = ptr;
             j += 10;
         }
-
     }
 }
 void initEverything(){
@@ -325,9 +346,11 @@ void killEverything(){
 }
 void gameLoop(){
     while(running){
+        waitTime = SDL_GetTicks() + frames;
         handleEvents();
         update();
         render();
+        fps();
     }
 }
 
