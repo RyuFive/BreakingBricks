@@ -13,7 +13,9 @@ SDL_Window * window = NULL;
 SDL_Renderer * renderer = NULL;
 SDL_Event event;
 SDL_Texture * textures[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+FILE * maps[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 TTF_Font * font = NULL;
+int map = 1;
 bool running = true;
 int collision = 0;
 int score = 0;
@@ -47,7 +49,14 @@ struct Brick{
     struct Brick * next;
     struct Brick * prev;
 };
+struct Node{
+    char data;
+    struct Node * next;
+    struct Node * prev;
+};
 
+struct Node * nodeHead = NULL;
+struct Node * nodeTail = NULL;
 struct Brick * brickHead = NULL;
 struct Brick * brickTail = NULL;
 struct Ball * ballHead = NULL;
@@ -167,7 +176,7 @@ void initBat(){
     bat->box.h = 15;
     bat->box.x = screen->box.w / 2 - bat->box.w / 2;
     bat->box.y = screen->box.h - 30;
-    bat->speed = 8;
+    bat->speed = 6;
     bat->ball = NULL;
     bat->move[0] = 0;
     bat->move[1] = 0;
@@ -200,6 +209,25 @@ void initBrick(int x, int y, int w, int h){
 		brickTail = ptr;
 	}
 }
+void convertToList(){
+    char temp;
+    temp = getc(maps[map]);
+    struct Node * ptr = (struct Node *)malloc(sizeof(struct Node));
+    ptr->data = temp;
+    if (nodeHead != NULL){
+		nodeHead->prev = ptr;
+	}
+	ptr->next = nodeHead;
+	ptr->prev = NULL;
+	nodeHead = ptr;
+	if (nodeTail == NULL){
+		nodeTail = ptr;
+	}
+}
+void setSpeed(struct Ball * ball){
+    ball->velX = 1;
+    ball->velY = -3;
+}
 void handleEvents(){
     while (SDL_PollEvent(&event)){
         if (event.type == SDL_QUIT){
@@ -224,8 +252,10 @@ void handleEvents(){
                     break;
                 }
                 case SDLK_SPACE:{
-                    // move the ball from the bat
-                    bat->ball = NULL;
+                    if (bat->ball){
+                        setSpeed(bat->ball);
+                        bat->ball = NULL;
+                    }
                     break;
                 }
                 default:{
@@ -249,6 +279,10 @@ void handleEvents(){
 //      event.type == SDL_MOUSEBUTTONDOWN
     }
 }
+void loadMaps(){
+    maps[0] = fopen("map0.txt", "r");
+    maps[1] = fopen("map1.txt", "r");
+}
 void loadTextures(){
     textures[0] = loadTexture("res/ball.png");
     textures[1] = loadTexture("res/bat.png");
@@ -257,6 +291,30 @@ void loadTextures(){
 }
 void scoreUp(){
     score += 100;
+}
+bool dequeue(){
+    bool val = false;
+    bool another = false;
+    struct Node * temp = nodeTail;
+    nodeTail = nodeTail->prev;
+    nodeTail->next = NULL;
+    if (temp->data == '1'){
+        val = true;
+    }
+    if (temp->data == (char)10){
+        another = true;
+    }
+    free(temp);
+    if (another){
+        temp = nodeTail;
+        nodeTail = nodeTail->prev;
+        nodeTail->next = NULL;
+        if (temp->data == '1'){
+            val = true;
+        }
+        free(temp);
+    }
+    return val;
 }
 void deleteBrick(struct Brick * brick){
     if (brick->next == NULL && brick->prev == NULL){
@@ -316,9 +374,40 @@ bool checkHorizontal(struct Ball * ball){
     ball->box.x = ball->box.x - ball->velX;
     return false;
 }
+void adjustTilt(struct Ball * ball){
+    ball->box.y = ball->box.y - ball->velY;
+    if (bat->move[2] > 0){
+        if (ball->velX > 0){
+            ball->velX -= 1;
+            ball->velY += 1;
+        }
+        else if (ball->velX < 0){
+            ball->velX -= 1;
+            ball->velY -= 1;
+        }
+    }
+    else if (bat->move[3] > 0){
+        if (ball->velX > 0){
+            ball->velX += 1;
+            ball->velY -= 1;
+        }
+        else if (ball->velX < 0){
+            ball->velX += 1;
+            ball->velY += 1;
+        }
+    }
+    else if (ball->velX == 0){
+        while(ball->velX == 0){
+            ball->velX = rand() % 3 - 1;
+        }
+        ball->velY -= 1;
+    }
+    ball->box.y = ball->box.y + ball->velY;
+}
 bool checkVertical(struct Ball * ball){
     ball->box.y = ball->box.y + ball->velY;
     if (SDL_HasIntersection(&(ball->box), &(bat->box))){
+        adjustTilt(ball);
         return true;
     }
     struct Brick * temp = brickHead;
@@ -485,18 +574,19 @@ void moveBat(){
     bat->box.x -= bat->move[2];
     bat->box.x += bat->move[3];
 }
-void correctVel(struct Ball * temp){
-    while(temp->velX == 0){
-        temp->velX = rand() % 3 - 1;
-    }
-    while(temp->velY == 0){
-        temp->velY = rand() % 3 - 1;
+void correctVel(struct Ball * ball){
+    if (bat->ball == NULL){
+        while(ball->velX == 0){
+            ball->velX = rand() % 3 - 1;
+        }
+        while(ball->velY == 0){
+            ball->velY = rand() % 3 - 1;
+        }
     }
 }
 void update(){
     struct Ball * temp = ballHead;
     while (temp != null){
-//        correctVel(temp);
         moveBall(temp);
         collisionCorrection(temp);
         temp = temp->next;
@@ -529,13 +619,19 @@ void initEverything(){
     srand((unsigned) time(&t));
     initGameScreen();
     initSDL(); //INIT SDL,WINDOW,RENDERER
+    loadMaps();
+    for(int i = 0; i < 90; i++){
+        convertToList();
+    }
     loadTextures();
-    for (int i = 0; i < 100; i += 5){
-        for (int j = 0; j < 100; j += 10){
+    for (int j = 0; j < 100; j += 10){
+        for (int i = 0; i < 100; i += 5){
             if (i % 10 == 0 || i % 95 == 0 || i == 0 || j == 0){
                 continue;
             }
-            initBrick(screen->box.w / 100 * i, screen->box.h / 100 / 2 * j, screen->box.w / 10, screen->box.h / 10 / 2);
+            if (dequeue()){
+                initBrick(screen->box.w / 100 * i, screen->box.h / 100 / 2 * j, screen->box.w / 10, screen->box.h / 10 / 2);
+            }
         }
     }
     initBat();
@@ -544,6 +640,9 @@ void initEverything(){
 void killEverything(){
     for(int i=0; textures[i] != NULL; i++){
         SDL_DestroyTexture(textures[i]);
+    }
+    for(int i=0; maps[i] != NULL; i++){
+        fclose(maps[i]);
     }
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -567,5 +666,3 @@ int main(int argc, char* argv[]){
     killEverything();
     return 0;
 }
-
-

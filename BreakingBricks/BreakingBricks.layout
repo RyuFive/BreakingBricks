@@ -4,49 +4,15 @@
 	<ActiveTarget name="Debug" />
 	<File name="main.c" open="1" top="1" tabpos="1" split="0" active="1" splitpos="0" zoom_1="6" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="5924" topLine="51" />
+			<Cursor1 position="10450" topLine="372" />
 		</Cursor>
 		<Folding>
-			<Collapse line="23" />
-			<Collapse line="31" />
-			<Collapse line="35" />
-			<Collapse line="43" />
-			<Collapse line="57" />
-			<Collapse line="61" />
-			<Collapse line="69" />
-			<Collapse line="88" />
-			<Collapse line="96" />
-			<Collapse line="103" />
-			<Collapse line="135" />
-			<Collapse line="163" />
-			<Collapse line="177" />
-			<Collapse line="185" />
-			<Collapse line="204" />
-			<Collapse line="230" />
-			<Collapse line="244" />
-			<Collapse line="251" />
-			<Collapse line="257" />
-			<Collapse line="260" />
-			<Collapse line="278" />
-			<Collapse line="295" />
-			<Collapse line="301" />
-			<Collapse line="318" />
-			<Collapse line="336" />
-			<Collapse line="356" />
-			<Collapse line="371" />
-			<Collapse line="386" />
-			<Collapse line="406" />
-			<Collapse line="419" />
-			<Collapse line="442" />
-			<Collapse line="450" />
-			<Collapse line="455" />
-			<Collapse line="480" />
-			<Collapse line="487" />
-			<Collapse line="505" />
-			<Collapse line="521" />
-			<Collapse line="543" />
-			<Collapse line="553" />
+			<Collapse line="25" />
+			<Collapse line="33" />
+			<Collapse line="37" />
+			<Collapse line="45" />
+			<Collapse line="51" />
 		</Folding>
 	</File>
-	<EditorTabsLayout layout="09338668584152250000219200000002=*0;BreakingBricks:main.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=680;besth=316;minw=680;minh=316;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=09338668584152250000219200000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
+	<EditorTabsLayout layout="09479fe85841c9d700001f0400000002=*0;BreakingBricks:main.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=680;besth=316;minw=680;minh=316;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=09479fe85841c9d700001f0400000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
 </CodeBlocks_layout_file>
