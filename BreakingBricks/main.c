@@ -38,6 +38,7 @@ struct Bat{
     int speed;
     int move[4];
     SDL_Texture * pic;
+    struct Ball * ball;
 
 };
 struct Brick{
@@ -101,6 +102,9 @@ void renderTexture(SDL_Texture * texture, int x, int y){
     SDL_RenderCopy(renderer, texture, NULL, &rect);
 }
 void initBall(int x, int y, int w, int h){
+    if (bat->ball != NULL){
+        return;
+    }
     SDL_Rect box;
     box.x = x;
     box.y = y;
@@ -116,12 +120,9 @@ void initBall(int x, int y, int w, int h){
     struct Ball * ptr = (struct Ball *)malloc(sizeof(struct Ball));
     ptr->box = box;
     ptr->pic = textures[0];
-    ptr->velX = rand() % 11 - 5;
-    ptr->velY = rand() % 11 - 5;
-    while (ptr->velX == 0 || ptr->velY == 0){
-        ptr->velX = rand() % 3 - 1;
-        ptr->velY = rand() % 3 - 1;
-    }
+    bat->ball = ptr;
+    ptr->velX = 0;
+    ptr->velY = 0;
 	if (ballHead != NULL){
 		ballHead->prev = ptr;
 	}
@@ -130,6 +131,73 @@ void initBall(int x, int y, int w, int h){
 	ballHead = ptr;
 	if (ballTail == NULL){
 		ballTail = ptr;
+	}
+}
+void initSDL(){
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
+        logSDLError("Init");
+        return;
+    }
+    if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) != IMG_INIT_PNG){
+        logSDLError("IMG_Init");
+        SDL_Quit();
+        return;
+    }
+    if (TTF_Init() != 0){
+        logSDLError("TTF_Init");
+        SDL_Quit();
+    }
+    window = SDL_CreateWindow("An SDL2 window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen->box.w, screen->box.h, SDL_WINDOW_OPENGL);
+    if (window == NULL){
+        logSDLError("CreateWindow");
+        SDL_Quit();
+        return;
+    }
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (renderer == NULL){
+        SDL_DestroyWindow(window);
+        logSDLError("CreateRenderer");
+        SDL_Quit();
+        return;
+    }
+}
+void initBat(){
+    bat = (struct Bat *)malloc(sizeof(struct Bat));
+    bat->box.w = 100;
+    bat->box.h = 15;
+    bat->box.x = screen->box.w / 2 - bat->box.w / 2;
+    bat->box.y = screen->box.h - 30;
+    bat->speed = 8;
+    bat->ball = NULL;
+    bat->move[0] = 0;
+    bat->move[1] = 0;
+    bat->move[2] = 0;
+    bat->move[3] = 0;
+    bat->pic = textures[1];
+}
+void initGameScreen(){
+    screen = (struct Screen *)malloc(sizeof(struct Screen));
+    screen->box.x = 0;
+    screen->box.y = 0;
+    screen->box.w = 800;
+    screen->box.h = 600;
+    screen->pic = NULL;
+}
+void initBrick(int x, int y, int w, int h){
+    struct Brick * ptr = (struct Brick *)malloc(sizeof(struct Brick));
+	ptr->box.x = x;
+    ptr->box.y = y;
+    ptr->box.w = w;
+    ptr->box.h = h;
+    ptr->pic = textures[2];
+	if (brickHead != NULL){
+		brickHead->prev = ptr;
+	}
+	ptr->next = brickHead;
+	ptr->prev = NULL;
+	brickHead = ptr;
+	if (brickTail == NULL){
+		brickTail = ptr;
 	}
 }
 void handleEvents(){
@@ -152,7 +220,12 @@ void handleEvents(){
                     break;
                 }
                 case SDLK_b:{
-                    initBall(screen->box.w / 2 - 8, screen->box.h / 2 - 8, 16, 16);
+                    initBall(bat->box.x + bat->box.w / 2 - 8, bat->box.y - 16, 16, 16);
+                    break;
+                }
+                case SDLK_SPACE:{
+                    // move the ball from the bat
+                    bat->ball = NULL;
                     break;
                 }
                 default:{
@@ -169,10 +242,6 @@ void handleEvents(){
                     bat->move[3] = 0;
                     break;
                 }
-                case SDLK_x:{
-                    running = false;
-                    break;
-                }
                 default:{
                 }
             }
@@ -184,6 +253,7 @@ void loadTextures(){
     textures[0] = loadTexture("res/ball.png");
     textures[1] = loadTexture("res/bat.png");
     textures[2] = loadTexture("res/brick.png");
+    textures[3] = loadTexture("res/back.png");
 }
 void scoreUp(){
     score += 100;
@@ -383,7 +453,7 @@ void collisionCorrection(struct Ball * ball){
     collisionBlocks(ball);
     collisionBalls(ball);
 }
-void moveBall(struct Ball * ball){
+void speedUpBallWithTime(struct Ball * ball){
     if (framesPassed % 1500 == 0){
         if (ball->velX < 0){
             ball->velX -= 1;
@@ -398,9 +468,15 @@ void moveBall(struct Ball * ball){
             ball->velY += 1;
         }
     }
-    printf("velocity: %d, %d\n", ball->velX, ball->velY);
+}
+void moveBall(struct Ball * ball){
+//    speedUpBallWithTime(ball);
     ball->box.x = ball->box.x + ball->velX;
     ball->box.y = ball->box.y + ball->velY;
+    if (bat->ball == ball){
+        ball->box.x = bat->box.x + bat->box.w / 2 - 8;
+        ball->box.y = bat->box.y - 16;
+    }
 }
 void moveBat(){
     if (bat->box.x - bat->move[2] < screen->box.x || bat->box.x + bat->move[3] + bat->box.w > screen->box.w){
@@ -420,7 +496,7 @@ void correctVel(struct Ball * temp){
 void update(){
     struct Ball * temp = ballHead;
     while (temp != null){
-        correctVel(temp);
+//        correctVel(temp);
         moveBall(temp);
         collisionCorrection(temp);
         temp = temp->next;
@@ -429,6 +505,7 @@ void update(){
 }
 void render(){
     SDL_RenderClear(renderer);
+    renderTextureScale(textures[3], 0, 0, screen->box.w, screen->box.h);
     struct Brick * temp = brickHead;
     while (temp != NULL){
         renderTextureScale(temp->pic, temp->box.x, temp->box.y, temp->box.w, temp->box.h);
@@ -447,88 +524,22 @@ void fps(){
     while (!SDL_TICKS_PASSED(SDL_GetTicks(), waitTime)) {
     }
 }
-void initSDL(){
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
-        logSDLError("Init");
-        return;
-    }
-    if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) != IMG_INIT_PNG){
-        logSDLError("IMG_Init");
-        SDL_Quit();
-        return;
-    }
-    if (TTF_Init() != 0){
-        logSDLError("TTF_Init");
-        SDL_Quit();
-    }
-    window = SDL_CreateWindow("An SDL2 window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen->box.w, screen->box.h, SDL_WINDOW_OPENGL);
-    if (window == NULL){
-        logSDLError("CreateWindow");
-        SDL_Quit();
-        return;
-    }
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (renderer == NULL){
-        SDL_DestroyWindow(window);
-        logSDLError("CreateRenderer");
-        SDL_Quit();
-        return;
-    }
-}
-void initBat(){
-    bat = (struct Bat *)malloc(sizeof(struct Bat));
-    bat->box.w = 100;
-    bat->box.h = 15;
-    bat->box.x = screen->box.w / 2 - bat->box.w / 2;
-    bat->box.y = screen->box.h - 30;
-    bat->speed = 8;
-    bat->move[0] = 0;
-    bat->move[1] = 0;
-    bat->move[2] = 0;
-    bat->move[3] = 0;
-    bat->pic = textures[1];
-}
-void initScreen(){
-    screen = (struct Screen *)malloc(sizeof(struct Screen));
-    screen->box.x = 0;
-    screen->box.y = 0;
-    screen->box.w = 800;
-    screen->box.h = 600;
-    screen->pic = NULL;
-}
-void initBrick(int x, int y, int w, int h){
-    struct Brick * ptr = (struct Brick *)malloc(sizeof(struct Brick));
-	ptr->box.x = x;
-    ptr->box.y = y;
-    ptr->box.w = w;
-    ptr->box.h = h;
-    ptr->pic = textures[2];
-	if (brickHead != NULL){
-		brickHead->prev = ptr;
-	}
-	ptr->next = brickHead;
-	ptr->prev = NULL;
-	brickHead = ptr;
-	if (brickTail == NULL){
-		brickTail = ptr;
-	}
-}
 void initEverything(){
     time_t t;
     srand((unsigned) time(&t));
-    initScreen();
+    initGameScreen();
     initSDL(); //INIT SDL,WINDOW,RENDERER
     loadTextures();
-    for (int i = 40; i < 760; i += 80 ){
-        for (int j = 10; j < 250; j += 20){
-            initBrick(i, j, 80, 20);
-            j += 10;
+    for (int i = 0; i < 100; i += 5){
+        for (int j = 0; j < 100; j += 10){
+            if (i % 10 == 0 || i % 95 == 0 || i == 0 || j == 0){
+                continue;
+            }
+            initBrick(screen->box.w / 100 * i, screen->box.h / 100 / 2 * j, screen->box.w / 10, screen->box.h / 10 / 2);
         }
     }
-    initBall(screen->box.w / 2 - 8, screen->box.h / 2 - 8, 16, 16);
-    initBall(screen->box.w / 2 - 8, screen->box.h / 2 - 8, 16, 16);
-    initBall(screen->box.w / 2 - 8, screen->box.h / 2 - 8, 16, 16);
     initBat();
+    initBall(bat->box.x + bat->box.w / 2 - 8, bat->box.y - 16, 16, 16);
 }
 void killEverything(){
     for(int i=0; textures[i] != NULL; i++){
@@ -556,4 +567,5 @@ int main(int argc, char* argv[]){
     killEverything();
     return 0;
 }
+
 

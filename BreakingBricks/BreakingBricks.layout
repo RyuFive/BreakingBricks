@@ -4,64 +4,49 @@
 	<ActiveTarget name="Debug" />
 	<File name="main.c" open="1" top="1" tabpos="1" split="0" active="1" splitpos="0" zoom_1="6" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="14411" topLine="61" />
+			<Cursor1 position="5924" topLine="51" />
 		</Cursor>
 		<Folding>
 			<Collapse line="23" />
 			<Collapse line="31" />
 			<Collapse line="35" />
-			<Collapse line="42" />
-			<Collapse line="56" />
-			<Collapse line="60" />
-			<Collapse line="68" />
-			<Collapse line="87" />
-			<Collapse line="95" />
-			<Collapse line="102" />
-			<Collapse line="134" />
-			<Collapse line="136" />
-			<Collapse line="157" />
-			<Collapse line="171" />
-			<Collapse line="175" />
-			<Collapse line="182" />
-			<Collapse line="187" />
-			<Collapse line="190" />
-			<Collapse line="208" />
-			<Collapse line="225" />
-			<Collapse line="231" />
-			<Collapse line="248" />
-			<Collapse line="266" />
-			<Collapse line="286" />
+			<Collapse line="43" />
+			<Collapse line="57" />
+			<Collapse line="61" />
+			<Collapse line="69" />
+			<Collapse line="88" />
+			<Collapse line="96" />
+			<Collapse line="103" />
+			<Collapse line="135" />
+			<Collapse line="163" />
+			<Collapse line="177" />
+			<Collapse line="185" />
+			<Collapse line="204" />
+			<Collapse line="230" />
+			<Collapse line="244" />
+			<Collapse line="251" />
+			<Collapse line="257" />
+			<Collapse line="260" />
+			<Collapse line="278" />
+			<Collapse line="295" />
 			<Collapse line="301" />
-			<Collapse line="316" />
+			<Collapse line="318" />
 			<Collapse line="336" />
-			<Collapse line="349" />
-			<Collapse line="372" />
-			<Collapse line="380" />
-			<Collapse line="385" />
-			<Collapse line="404" />
-			<Collapse line="411" />
-			<Collapse line="412" />
-			<Collapse line="415" />
+			<Collapse line="356" />
+			<Collapse line="371" />
+			<Collapse line="386" />
+			<Collapse line="406" />
 			<Collapse line="419" />
-			<Collapse line="429" />
-			<Collapse line="432" />
-			<Collapse line="438" />
-			<Collapse line="444" />
-			<Collapse line="449" />
+			<Collapse line="442" />
 			<Collapse line="450" />
-			<Collapse line="454" />
-			<Collapse line="459" />
-			<Collapse line="464" />
-			<Collapse line="470" />
-			<Collapse line="477" />
-			<Collapse line="490" />
-			<Collapse line="498" />
+			<Collapse line="455" />
+			<Collapse line="480" />
+			<Collapse line="487" />
 			<Collapse line="505" />
-			<Collapse line="511" />
-			<Collapse line="532" />
-			<Collapse line="533" />
-			<Collapse line="542" />
+			<Collapse line="521" />
+			<Collapse line="543" />
+			<Collapse line="553" />
 		</Folding>
 	</File>
-	<EditorTabsLayout layout="09fc0d1858411a340000290400000002=*0;BreakingBricks:main.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=680;besth=316;minw=680;minh=316;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=09fc0d1858411a340000290400000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
+	<EditorTabsLayout layout="09338668584152250000219200000002=*0;BreakingBricks:main.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=680;besth=316;minw=680;minh=316;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=09338668584152250000219200000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
 </CodeBlocks_layout_file>
