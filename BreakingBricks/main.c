@@ -13,9 +13,10 @@ SDL_Renderer * renderer = NULL;
 SDL_Event event;
 SDL_Texture * textures[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 FILE * maps[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
-TTF_Font * font = NULL;
+TTF_Font * font= NULL;
 SDL_Rect clips[25];
-int map = 3;
+int map = 4;
+int mapLevel = 3;
 bool running = true;
 int collision = 0;
 int score = 0;
@@ -25,6 +26,8 @@ float waitTime;
 int ballSize = 32;
 int batSize = 200;
 int batSpeed = 8;
+int brickWidth = 0;
+int brickHeight = 0;
 int brickColor = 0;
 int mapNoX = -1;
 int mapNoY = 1;
@@ -189,6 +192,12 @@ void initSDL(){
     if (TTF_Init() != 0){
         logSDLError("TTF_Init");
         SDL_Quit();
+        return;
+    }
+    font = TTF_OpenFont("res/ttf/metal.ttf", 50);
+    if (font == NULL){
+        logSDLError("TextLoad");
+        return;
     }
     window = SDL_CreateWindow("An SDL2 window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
     if (window == NULL){
@@ -256,6 +265,22 @@ void convertToList(){
     while(!feof(maps[map])){
         char temp;
         temp = getc(maps[map]);
+        if (brickWidth == 0){
+            while(temp != (char)10){
+                brickWidth *= 10;
+                brickWidth += temp - '0';
+                temp = getc(maps[map]);
+            }
+            continue;
+        }
+        else if (brickHeight == 0){
+            while(temp != (char)10){
+                brickHeight *= 10;
+                brickHeight += temp - '0';
+                temp = getc(maps[map]);
+            }
+            continue;
+        }
         if (mapNoY == 1){
             mapNoX++;
         }
@@ -351,40 +376,37 @@ void loadTextures(){
     textures[0] = loadTexture("res/img/ball.png");
     textures[1] = loadTexture("res/img/bat.png");
     textures[2] = loadTexture("res/img/brick.png");
-    textures[3] = loadTexture("res/img/back2.png");
+    textures[3] = loadTexture("res/img/back.png");
     textures[4] = loadTexture("res/img/pause.png");
     textures[5] = loadTexture("res/img/bricks.png");
-    textures[6] = loadTexture("res/img/bar.png");
+    textures[6] = loadTexture("res/img/status.png");
 }
 void scoreUp(){
     score += 100;
 }
-bool dequeue(){
-    if (nodeTail == NULL){
-        return false;
-    }
-    bool val;
-    bool another = false;
+int dequeue(int n){
+    int returnValue = 0;
     struct Node * temp = nodeTail;
-    nodeTail = nodeTail->prev;
-    nodeTail->next = NULL;
-    if (temp->data == '1'){
-        val = true;
-    }
-    if (temp->data == (char)10){
-        another = true;
-    }
-    free(temp);
-    if (another){
-        temp = nodeTail;
+    while (n > 0){
+        if (nodeTail->data == (char)10){
+            nodeTail = nodeTail->prev;
+            nodeTail->next = NULL;
+            returnValue = -1;
+            free(temp);
+            break;
+        }
+        if (nodeTail->next == NULL && nodeTail->prev == NULL){
+            free(nodeTail);
+            break;
+        }
+        returnValue *= 10;
+        returnValue += nodeTail->data - '0';
         nodeTail = nodeTail->prev;
         nodeTail->next = NULL;
-        if (temp->data == '1'){
-            val = true;
-        }
         free(temp);
+        n--;
     }
-    return val;
+    return returnValue;
 }
 void deleteBrick(struct Brick * brick){
     if (brick->next == NULL && brick->prev == NULL){
@@ -748,15 +770,42 @@ void initEverything(){
     convertToList();
     initStatus();
     initGameScreen();
-    mapNoX = mapNoX / 3;
-    for (int j = 0; j < 100; j += 10){
-        brickColor = rand() % 25;
-        for (int i = 0; i < 100; i += 5){
-            if (i % 10 == 0 || i % 95 == 0 || i == 0 || j == 0){
-                continue;
+    int brickInit = 0, iW, iH;
+    if(mapLevel == 1){
+        iW = SCREEN_WIDTH / (mapNoX + 1) / 2;
+        iH = status->box.h + SCREEN_HEIGHT / (mapNoX + 1) / 4;
+    }
+    else if (mapLevel == 3){
+        mapNoX = mapNoX / 3;
+        iW = SCREEN_WIDTH / (mapNoX + 5) / 2 * 5;
+        iH = status->box.h + SCREEN_HEIGHT / (mapNoX + 5) / 4;
+    }
+    brickColor = rand() % 25;
+    while (nodeTail->prev != NULL){
+        brickInit = dequeue(mapLevel);
+        if (mapLevel == 3){
+            if (brickInit == -1){
+                brickInit = dequeue(mapLevel);
             }
-            if (dequeue()){
-                initBrick(screen->box.w * i / 100, screen->box.h * j / 100 / 2, screen->box.w / 10, screen->box.h / 10 / 2, brickColor);
+            if (brickInit / 100 == 1){
+                initBrick(iW, iH, brickWidth, brickHeight, brickInit - 100);
+            }
+            iW += SCREEN_WIDTH / (mapNoX + 5);
+            if(iW > SCREEN_WIDTH / (mapNoX + 5) / 4 * 90){
+                brickColor = rand() % 25;
+                iW = SCREEN_WIDTH / (mapNoX + 5) / 2 * 5;
+                iH += SCREEN_HEIGHT / (mapNoY + 5) / 2;
+            }
+        }
+        if (mapLevel == 1){
+            if (brickInit == 1){
+                initBrick(iW, iH, brickWidth, brickHeight, brickColor);
+            }
+            iW += SCREEN_WIDTH / (mapNoX + 1);
+            if(iW > SCREEN_WIDTH / (mapNoX + 1) / 4 * 38){
+                brickColor = rand() % 25;
+                iW = SCREEN_WIDTH / (mapNoX + 1) / 2;
+                iH += SCREEN_HEIGHT / (mapNoY + 1) / 3;
             }
         }
     }
