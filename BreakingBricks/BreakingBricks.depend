@@ -10,3 +10,14 @@
 	<SDL_image.h>
 	<SDL_TTF.h>
 
+1480758795 source:c:\users\ahmad javaid\desktop\breakingbricks\breakingbricks\main.c
+	<stdio.h>
+	<stdlib.h>
+	<conio.h>
+	<time.h>
+	<stdbool.h>
+	<string.h>
+	"SDL.h"
+	<SDL_image.h>
+	<SDL_TTF.h>
+

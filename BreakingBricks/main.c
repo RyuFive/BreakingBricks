@@ -742,8 +742,8 @@ void gameLoop(){
 }
 
 int main(int argc, char* argv[]){
-    initEverything();
-    gameLoop();
-    killEverything();
-    return 0;
+    //initEverything();
+    //gameLoop();
+  //  killEverything();
+//    return 0;
 }
