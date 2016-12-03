@@ -15,7 +15,7 @@ SDL_Texture * textures[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NU
 FILE * maps[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 TTF_Font * font = NULL;
 SDL_Rect clips[25];
-int map = 1;
+int map = 3;
 bool running = true;
 int collision = 0;
 int score = 0;
@@ -231,7 +231,7 @@ void initStatus(){
 void initBrick(int x, int y, int w, int h, int brickColor){
     struct Brick * ptr = (struct Brick *)malloc(sizeof(struct Brick));
 	ptr->box.x = x;
-    ptr->box.y = y;
+    ptr->box.y = y + status->box.h;
     ptr->box.w = w;
     ptr->box.h = h;
     ptr->brickColor = brickColor;
@@ -329,6 +329,8 @@ void handleEvents(){
 void loadMaps(){
     maps[0] = fopen("res/map/map0.txt", "r");
     maps[1] = fopen("res/map/map1.txt", "r");
+    maps[2] = fopen("res/map/map2.txt", "r");
+    maps[3] = fopen("res/map/map3.txt", "r");
 }
 void loadTextures(){
     textures[0] = loadTexture("res/img/ball.png");
@@ -564,7 +566,7 @@ void collisionWalls(struct Ball * ball){
     {
         ball->velY = ball->velY * -1;
     }
-    if (ball->box.y >= screen->box.h){
+    if (ball->box.y >= screen->box.h + status->box.h){
         deleteBall(ball);
     }
 }
@@ -658,6 +660,7 @@ void update(){
 
     }
     if (gameState == game){
+
         struct Ball * temp = ballHead;
         while (temp != NULL){
             moveBall(temp);
