@@ -22,9 +22,15 @@ int score = 0;
 int framesPassed = 0;
 float frequency = 10;
 float waitTime;
-int ballSize = 16;
+int ballSize = 32;
 int batSize = 200;
+int batSpeed = 8;
 int brickColor = 0;
+int mapNoX = -1;
+int mapNoY = 1;
+int lives = 3;
+int SCREEN_WIDTH = 1366;
+int SCREEN_HEIGHT = 768;
 enum states {game, pause, menu, options, help};
 enum states gameState = game;
 
@@ -184,7 +190,7 @@ void initSDL(){
         logSDLError("TTF_Init");
         SDL_Quit();
     }
-    window = SDL_CreateWindow("An SDL2 window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen->box.w, screen->box.h + status->box.h, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("An SDL2 window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
     if (window == NULL){
         logSDLError("CreateWindow");
         SDL_Quit();
@@ -204,7 +210,7 @@ void initBat(){
     bat->box.h = 20;
     bat->box.x = screen->box.w / 2 - bat->box.w / 2;
     bat->box.y = status->box.h + screen->box.h - 30;
-    bat->speed = 6;
+    bat->speed = batSpeed;
     bat->ball = NULL;
     bat->move[0] = 0;
     bat->move[1] = 0;
@@ -216,17 +222,17 @@ void initGameScreen(){
     screen = (struct Screen *)malloc(sizeof(struct Screen));
     screen->box.x = status->box.x;
     screen->box.y = status->box.h;
-    screen->box.w = 800;
-    screen->box.h = 600;
-    screen->pic = NULL;
+    screen->box.w = SCREEN_WIDTH;
+    screen->box.h = SCREEN_HEIGHT - status->box.h;
+    screen->pic = textures[3];
 }
 void initStatus(){
     status = (struct Status *)malloc(sizeof(struct Status));
     status->box.x = 0;
     status->box.y = 0;
-    status->box.w = 800;
+    status->box.w = SCREEN_WIDTH;
     status->box.h = 50;
-    status->pic = NULL;
+    status->pic = textures[6];
 }
 void initBrick(int x, int y, int w, int h, int brickColor){
     struct Brick * ptr = (struct Brick *)malloc(sizeof(struct Brick));
@@ -247,23 +253,31 @@ void initBrick(int x, int y, int w, int h, int brickColor){
 	}
 }
 void convertToList(){
-    char temp;
-    temp = getc(maps[map]);
-    struct Node * ptr = (struct Node *)malloc(sizeof(struct Node));
-    ptr->data = temp;
-    if (nodeHead != NULL){
-		nodeHead->prev = ptr;
-	}
-	ptr->next = nodeHead;
-	ptr->prev = NULL;
-	nodeHead = ptr;
-	if (nodeTail == NULL){
-		nodeTail = ptr;
-	}
+    while(!feof(maps[map])){
+        char temp;
+        temp = getc(maps[map]);
+        if (mapNoY == 1){
+            mapNoX++;
+        }
+        if (temp == (char)10){
+            mapNoY++;
+        }
+        struct Node * ptr = (struct Node *)malloc(sizeof(struct Node));
+        ptr->data = temp;
+        if (nodeHead != NULL){
+            nodeHead->prev = ptr;
+        }
+        ptr->next = nodeHead;
+        ptr->prev = NULL;
+        nodeHead = ptr;
+        if (nodeTail == NULL){
+            nodeTail = ptr;
+        }
+    }
 }
 void setSpeed(struct Ball * ball){
-    ball->velX = 1;
-    ball->velY = -3;
+    ball->velX = 2;
+    ball->velY = -5;
 }
 void handleEvents(){
     while (SDL_PollEvent(&event)){
@@ -331,6 +345,7 @@ void loadMaps(){
     maps[1] = fopen("res/map/map1.txt", "r");
     maps[2] = fopen("res/map/map2.txt", "r");
     maps[3] = fopen("res/map/map3.txt", "r");
+    maps[4] = fopen("res/map/map4.txt", "r");
 }
 void loadTextures(){
     textures[0] = loadTexture("res/img/ball.png");
@@ -339,12 +354,16 @@ void loadTextures(){
     textures[3] = loadTexture("res/img/back2.png");
     textures[4] = loadTexture("res/img/pause.png");
     textures[5] = loadTexture("res/img/bricks.png");
+    textures[6] = loadTexture("res/img/bar.png");
 }
 void scoreUp(){
     score += 100;
 }
 bool dequeue(){
-    bool val = false;
+    if (nodeTail == NULL){
+        return false;
+    }
+    bool val;
     bool another = false;
     struct Node * temp = nodeTail;
     nodeTail = nodeTail->prev;
@@ -427,6 +446,20 @@ bool checkHorizontal(struct Ball * ball){
 }
 void adjustTilt(struct Ball * ball){
     ball->box.y = ball->box.y - ball->velY;
+    int cen = bat->box.w / 2 + bat->box.x;
+    int cenB = ball->box.w / 2 + ball->box.x;
+    if (cenB > cen + 55){
+        if (ball->velX < 0){
+            ball->velX *= -1;
+            return;
+        }
+    }
+    else if (cenB < cen - 55){
+        if (ball->velX > 0){
+            ball->velX *= -1;
+            return;
+        }
+    }
     if (ball->velX == 0){
         if (bat->move[2] > 0){
             ball->velX = -1;
@@ -557,6 +590,9 @@ bool checkBothBall(struct Ball * ball){
     ball->box.y = ball->box.y - ball->velY;
     return false;
 }
+void updateLives(int n){
+    lives += n;
+}
 void collisionWalls(struct Ball * ball){
     if (ball->box.x <= screen->box.x || ball->box.x + ball->box.w >= screen->box.w)
     {
@@ -567,7 +603,11 @@ void collisionWalls(struct Ball * ball){
         ball->velY = ball->velY * -1;
     }
     if (ball->box.y >= screen->box.h + status->box.h){
+        updateLives(-1);
         deleteBall(ball);
+        if (lives > 0){
+            initBall(bat->box.x + bat->box.w / 2 - ballSize / 2, bat->box.y - ballSize, ballSize, ballSize);
+        }
     }
 }
 void collisionBlocks(struct Ball * ball){
@@ -607,7 +647,7 @@ void collisionCorrection(struct Ball * ball){
     collisionBalls(ball);
 }
 void speedUpBallWithTime(struct Ball * ball){
-    if (framesPassed % 1500 == 0){
+    if (framesPassed % 2500 == 0){
         if (ball->velX < 0){
             ball->velX -= 1;
         }
@@ -623,7 +663,7 @@ void speedUpBallWithTime(struct Ball * ball){
     }
 }
 void moveBall(struct Ball * ball){
-//    speedUpBallWithTime(ball);
+    speedUpBallWithTime(ball);
     if (bat->ball == ball){
         ball->box.x = bat->box.x + bat->box.w / 2 - ballSize / 2;
         ball->box.y = bat->box.y - ballSize;
@@ -648,14 +688,14 @@ void correctVel(struct Ball * ball){
         }
     }
 }
-void fps(){
+void fps(float frequency){
     framesPassed++;
     while (!SDL_TICKS_PASSED(SDL_GetTicks(), waitTime)) {
     }
     waitTime = SDL_GetTicks() + frequency;
 }
 void update(){
-    fps();
+    fps(frequency);
     if (gameState == menu){
 
     }
@@ -679,7 +719,8 @@ void render(){
 
     }
     if (gameState == game || gameState == pause){
-        renderTextureScale(textures[3], screen->box.x, screen->box.y, screen->box.w, screen->box.h);
+        renderTextureScale(status->pic, status->box.x, status->box.y, status->box.w, status->box.h);
+        renderTextureScale(screen->pic, screen->box.x, screen->box.y, screen->box.w, screen->box.h);
         struct Brick * temp = brickHead;
         while (temp != NULL){
             renderTextureClip(textures[5], temp->box.x, temp->box.y, temp->box.w, temp->box.h, &clips[temp->brickColor]);
@@ -700,15 +741,14 @@ void render(){
 void initEverything(){
     time_t t;
     srand((unsigned) time(&t));
-    initStatus();
-    initGameScreen();
     initSDL(); //INIT SDL,WINDOW,RENDERER
     loadTextures();
     sliceTexture(textures[5]);
     loadMaps();
-    for(int i = 0; i < 90; i++){
-        convertToList();
-    }
+    convertToList();
+    initStatus();
+    initGameScreen();
+    mapNoX = mapNoX / 3;
     for (int j = 0; j < 100; j += 10){
         brickColor = rand() % 25;
         for (int i = 0; i < 100; i += 5){
@@ -745,8 +785,8 @@ void gameLoop(){
 }
 
 int main(int argc, char* argv[]){
-    //initEverything();
-    //gameLoop();
-  //  killEverything();
-//    return 0;
+    initEverything();
+    gameLoop();
+    killEverything();
+    return 0;
 }
