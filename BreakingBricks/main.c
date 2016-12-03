@@ -7,7 +7,6 @@
 #include "SDL.h"
 #include <SDL_image.h>
 #include <SDL_TTF.h>
-#define null NULL
 
 SDL_Window * window = NULL;
 SDL_Renderer * renderer = NULL;
@@ -15,6 +14,7 @@ SDL_Event event;
 SDL_Texture * textures[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 FILE * maps[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 TTF_Font * font = NULL;
+SDL_Rect clips[25];
 int map = 1;
 bool running = true;
 int collision = 0;
@@ -22,6 +22,11 @@ int score = 0;
 int framesPassed = 0;
 float frequency = 10;
 float waitTime;
+int ballSize = 16;
+int batSize = 200;
+int brickColor = 0;
+enum states {game, pause, menu, options, help};
+enum states gameState = game;
 
 struct Ball{
     SDL_Rect box;
@@ -30,6 +35,10 @@ struct Ball{
     SDL_Texture * pic;
     struct Ball * next;
     struct Ball * prev;
+};
+struct Status{
+    SDL_Rect box;
+    SDL_Texture * pic;
 };
 struct Screen{
     SDL_Rect box;
@@ -45,6 +54,7 @@ struct Bat{
 };
 struct Brick{
     SDL_Rect box;
+    int brickColor;
     SDL_Texture * pic;
     struct Brick * next;
     struct Brick * prev;
@@ -63,6 +73,7 @@ struct Ball * ballHead = NULL;
 struct Ball * ballTail = NULL;
 struct Bat * bat = NULL;
 struct Screen * screen = NULL;
+struct Status * status = NULL;
 
 void logSDLError(const char *  msg){
     printf("%sError: %s\n", msg, SDL_GetError());
@@ -110,6 +121,23 @@ void renderTexture(SDL_Texture * texture, int x, int y){
     SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
     SDL_RenderCopy(renderer, texture, NULL, &rect);
 }
+void renderTextureClip(SDL_Texture * texture, int x, int y, int w, int h, SDL_Rect * clips){
+    SDL_Rect rect;
+    rect.x = x;
+    rect.y = y;
+    rect.w = w;
+    rect.h = h;
+    SDL_RenderCopy(renderer, texture, clips, &rect);
+}
+void sliceTexture(){
+    int iW = 16, iH = 8;
+    for (int i = 0; i < 25; ++i){
+        clips[i].x = i / 5 * iW;
+        clips[i].y = i % 5 * iH;
+        clips[i].w = iW;
+        clips[i].h = iH;
+    }
+}
 void initBall(int x, int y, int w, int h){
     if (bat->ball != NULL){
         return;
@@ -156,7 +184,7 @@ void initSDL(){
         logSDLError("TTF_Init");
         SDL_Quit();
     }
-    window = SDL_CreateWindow("An SDL2 window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen->box.w, screen->box.h, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("An SDL2 window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen->box.w, screen->box.h + status->box.h, SDL_WINDOW_OPENGL);
     if (window == NULL){
         logSDLError("CreateWindow");
         SDL_Quit();
@@ -172,10 +200,10 @@ void initSDL(){
 }
 void initBat(){
     bat = (struct Bat *)malloc(sizeof(struct Bat));
-    bat->box.w = 100;
-    bat->box.h = 15;
+    bat->box.w = batSize;
+    bat->box.h = 20;
     bat->box.x = screen->box.w / 2 - bat->box.w / 2;
-    bat->box.y = screen->box.h - 30;
+    bat->box.y = status->box.h + screen->box.h - 30;
     bat->speed = 6;
     bat->ball = NULL;
     bat->move[0] = 0;
@@ -186,18 +214,27 @@ void initBat(){
 }
 void initGameScreen(){
     screen = (struct Screen *)malloc(sizeof(struct Screen));
-    screen->box.x = 0;
-    screen->box.y = 0;
+    screen->box.x = status->box.x;
+    screen->box.y = status->box.h;
     screen->box.w = 800;
     screen->box.h = 600;
     screen->pic = NULL;
 }
-void initBrick(int x, int y, int w, int h){
+void initStatus(){
+    status = (struct Status *)malloc(sizeof(struct Status));
+    status->box.x = 0;
+    status->box.y = 0;
+    status->box.w = 800;
+    status->box.h = 50;
+    status->pic = NULL;
+}
+void initBrick(int x, int y, int w, int h, int brickColor){
     struct Brick * ptr = (struct Brick *)malloc(sizeof(struct Brick));
 	ptr->box.x = x;
     ptr->box.y = y;
     ptr->box.w = w;
     ptr->box.h = h;
+    ptr->brickColor = brickColor;
     ptr->pic = textures[2];
 	if (brickHead != NULL){
 		brickHead->prev = ptr;
@@ -247,14 +284,21 @@ void handleEvents(){
                     running = false;
                     break;
                 }
-                case SDLK_b:{
-                    initBall(bat->box.x + bat->box.w / 2 - 8, bat->box.y - 16, 16, 16);
+                case SDLK_p:{
+                    if (gameState == game){
+                        gameState = pause;
+                    }
+                    else if (gameState == pause){
+                        gameState = game;
+                    }
                     break;
                 }
                 case SDLK_SPACE:{
-                    if (bat->ball){
-                        setSpeed(bat->ball);
-                        bat->ball = NULL;
+                    if (gameState == game){
+                        if (bat->ball){
+                            setSpeed(bat->ball);
+                            bat->ball = NULL;
+                        }
                     }
                     break;
                 }
@@ -276,18 +320,23 @@ void handleEvents(){
                 }
             }
         }
+        if (event.type == SDL_MOUSEMOTION){
+
+        }
 //      event.type == SDL_MOUSEBUTTONDOWN
     }
 }
 void loadMaps(){
-    maps[0] = fopen("map0.txt", "r");
-    maps[1] = fopen("map1.txt", "r");
+    maps[0] = fopen("res/map/map0.txt", "r");
+    maps[1] = fopen("res/map/map1.txt", "r");
 }
 void loadTextures(){
-    textures[0] = loadTexture("res/ball.png");
-    textures[1] = loadTexture("res/bat.png");
-    textures[2] = loadTexture("res/brick.png");
-    textures[3] = loadTexture("res/back.png");
+    textures[0] = loadTexture("res/img/ball.png");
+    textures[1] = loadTexture("res/img/bat.png");
+    textures[2] = loadTexture("res/img/brick.png");
+    textures[3] = loadTexture("res/img/back2.png");
+    textures[4] = loadTexture("res/img/pause.png");
+    textures[5] = loadTexture("res/img/bricks.png");
 }
 void scoreUp(){
     score += 100;
@@ -376,31 +425,44 @@ bool checkHorizontal(struct Ball * ball){
 }
 void adjustTilt(struct Ball * ball){
     ball->box.y = ball->box.y - ball->velY;
-    if (bat->move[2] > 0){
-        if (ball->velX > 0){
-            ball->velX -= 1;
-            ball->velY += 1;
+    if (ball->velX == 0){
+        if (bat->move[2] > 0){
+            ball->velX = -1;
         }
-        else if (ball->velX < 0){
-            ball->velX -= 1;
-            ball->velY -= 1;
+        else if (bat->move[3] > 0){
+            ball->velX = 1;
         }
-    }
-    else if (bat->move[3] > 0){
-        if (ball->velX > 0){
-            ball->velX += 1;
-            ball->velY -= 1;
-        }
-        else if (ball->velX < 0){
-            ball->velX += 1;
-            ball->velY += 1;
-        }
-    }
-    else if (ball->velX == 0){
-        while(ball->velX == 0){
+        else{
             ball->velX = rand() % 3 - 1;
         }
         ball->velY -= 1;
+    }
+    else if (bat->move[2] > 0){
+        if (ball->velX > 0){
+            ball->velX -= 1;
+            ball->velY += 1;
+        }
+        else if (ball->velX < 0){
+            if (ball->velY - 1 == 0){
+                return;
+            }
+            ball->velX -= 1;
+            ball->velY -= 1;
+        }
+
+    }
+    else if (bat->move[3] > 0){
+        if (ball->velX > 0){
+            if (ball->velY - 1 == 0){
+                return;
+            }
+            ball->velX += 1;
+            ball->velY -= 1;
+        }
+        else if (ball->velX < 0){
+            ball->velX += 1;
+            ball->velY += 1;
+        }
     }
     ball->box.y = ball->box.y + ball->velY;
 }
@@ -560,11 +622,13 @@ void speedUpBallWithTime(struct Ball * ball){
 }
 void moveBall(struct Ball * ball){
 //    speedUpBallWithTime(ball);
-    ball->box.x = ball->box.x + ball->velX;
-    ball->box.y = ball->box.y + ball->velY;
     if (bat->ball == ball){
-        ball->box.x = bat->box.x + bat->box.w / 2 - 8;
-        ball->box.y = bat->box.y - 16;
+        ball->box.x = bat->box.x + bat->box.w / 2 - ballSize / 2;
+        ball->box.y = bat->box.y - ballSize;
+    }
+    else{
+        ball->box.x = ball->box.x + ball->velX;
+        ball->box.y = ball->box.y + ball->velY;
     }
 }
 void moveBat(){
@@ -576,66 +640,85 @@ void moveBat(){
 }
 void correctVel(struct Ball * ball){
     if (bat->ball == NULL){
-        while(ball->velX == 0){
-            ball->velX = rand() % 3 - 1;
-        }
+
         while(ball->velY == 0){
             ball->velY = rand() % 3 - 1;
         }
     }
 }
-void update(){
-    struct Ball * temp = ballHead;
-    while (temp != null){
-        moveBall(temp);
-        collisionCorrection(temp);
-        temp = temp->next;
-    }
-    moveBat();
-}
-void render(){
-    SDL_RenderClear(renderer);
-    renderTextureScale(textures[3], 0, 0, screen->box.w, screen->box.h);
-    struct Brick * temp = brickHead;
-    while (temp != NULL){
-        renderTextureScale(temp->pic, temp->box.x, temp->box.y, temp->box.w, temp->box.h);
-        temp = temp->next;
-    }
-    renderTextureScale(bat->pic, bat->box.x, bat->box.y, bat->box.w, bat->box.h);
-    struct Ball * temp2 = ballHead;
-    while (temp2 != NULL){
-        renderTextureScale(temp2->pic, temp2->box.x, temp2->box.y, temp2->box.w, temp2->box.h);
-        temp2 = temp2->next;
-    }
-    SDL_RenderPresent(renderer);
-}
 void fps(){
     framesPassed++;
     while (!SDL_TICKS_PASSED(SDL_GetTicks(), waitTime)) {
     }
+    waitTime = SDL_GetTicks() + frequency;
+}
+void update(){
+    fps();
+    if (gameState == menu){
+
+    }
+    if (gameState == game){
+        struct Ball * temp = ballHead;
+        while (temp != NULL){
+            moveBall(temp);
+            collisionCorrection(temp);
+            temp = temp->next;
+        }
+        moveBat();
+    }
+    if (gameState == pause){
+
+    }
+}
+void render(){
+    SDL_RenderClear(renderer);
+    if (gameState == menu){
+
+    }
+    if (gameState == game || gameState == pause){
+        renderTextureScale(textures[3], screen->box.x, screen->box.y, screen->box.w, screen->box.h);
+        struct Brick * temp = brickHead;
+        while (temp != NULL){
+            renderTextureClip(textures[5], temp->box.x, temp->box.y, temp->box.w, temp->box.h, &clips[temp->brickColor]);
+            temp = temp->next;
+        }
+        renderTextureScale(bat->pic, bat->box.x, bat->box.y, bat->box.w, bat->box.h);
+        struct Ball * temp2 = ballHead;
+        while (temp2 != NULL){
+            renderTextureScale(temp2->pic, temp2->box.x, temp2->box.y, temp2->box.w, temp2->box.h);
+            temp2 = temp2->next;
+        }
+    }
+    if (gameState == pause){
+        renderTextureScale(textures[4], screen->box.x, screen->box.y, screen->box.w, screen->box.h);
+    }
+    SDL_RenderPresent(renderer);
 }
 void initEverything(){
     time_t t;
     srand((unsigned) time(&t));
+    initStatus();
     initGameScreen();
     initSDL(); //INIT SDL,WINDOW,RENDERER
+    loadTextures();
+    sliceTexture(textures[5]);
     loadMaps();
     for(int i = 0; i < 90; i++){
         convertToList();
     }
-    loadTextures();
     for (int j = 0; j < 100; j += 10){
+        brickColor = rand() % 25;
         for (int i = 0; i < 100; i += 5){
             if (i % 10 == 0 || i % 95 == 0 || i == 0 || j == 0){
                 continue;
             }
             if (dequeue()){
-                initBrick(screen->box.w / 100 * i, screen->box.h / 100 / 2 * j, screen->box.w / 10, screen->box.h / 10 / 2);
+                initBrick(screen->box.w * i / 100, screen->box.h * j / 100 / 2, screen->box.w / 10, screen->box.h / 10 / 2, brickColor);
             }
         }
     }
     initBat();
-    initBall(bat->box.x + bat->box.w / 2 - 8, bat->box.y - 16, 16, 16);
+    initBall(bat->box.x + bat->box.w / 2 - ballSize / 2, bat->box.y - ballSize, ballSize, ballSize);
 }
 void killEverything(){
     for(int i=0; textures[i] != NULL; i++){
@@ -652,11 +735,9 @@ void killEverything(){
 }
 void gameLoop(){
     while(running){
-        waitTime = SDL_GetTicks() + frequency;
         update();
         render();
         handleEvents();
-        fps();
     }
 }
 
