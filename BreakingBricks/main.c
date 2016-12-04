@@ -4,18 +4,22 @@
 #include <time.h>
 #include <stdbool.h>
 #include <string.h>
+#include "windows.h"
 #include "SDL.h"
 #include <SDL_image.h>
+#include <SDL_mixer.h>
 #include <SDL_TTF.h>
+#define SCREEN_WIDTH GetSystemMetrics(SM_CXSCREEN)
+#define SCREEN_HEIGHT GetSystemMetrics(SM_CYSCREEN)
 
 SDL_Window * window = NULL;
 SDL_Renderer * renderer = NULL;
 SDL_Event event;
 SDL_Texture * textures[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
-FILE * maps[10] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+FILE * maps[100];
 TTF_Font * font= NULL;
 SDL_Rect clips[25];
-int map = 4;
+int map = 22;
 int mapLevel = 3;
 bool running = true;
 int collision = 0;
@@ -32,8 +36,6 @@ int brickColor = 0;
 int mapNoX = -1;
 int mapNoY = 1;
 int lives = 3;
-int SCREEN_WIDTH = 1366;
-int SCREEN_HEIGHT = 768;
 enum states {game, pause, menu, options, help};
 enum states gameState = game;
 
@@ -59,7 +61,6 @@ struct Bat{
     int move[4];
     SDL_Texture * pic;
     struct Ball * ball;
-
 };
 struct Brick{
     SDL_Rect box;
@@ -69,7 +70,7 @@ struct Brick{
     struct Brick * prev;
 };
 struct Node{
-    char data;
+    int data;
     struct Node * next;
     struct Node * prev;
 };
@@ -138,6 +139,17 @@ void renderTextureClip(SDL_Texture * texture, int x, int y, int w, int h, SDL_Re
     rect.h = h;
     SDL_RenderCopy(renderer, texture, clips, &rect);
 }
+void renderFont(TTF_Font * font, char * msg, int r, int g, int b, int a, int x, int y, int w, int h){
+    SDL_Rect rect;
+    rect.x = x;
+    rect.y = y;
+    rect.w = w;
+    rect.h = h;
+    SDL_Color color = {r, g, b, a};
+    SDL_Surface * surface = TTF_RenderText_Solid(font, msg, color);
+    SDL_Texture * texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_RenderCopy(renderer, texture, NULL, &rect);
+}
 void sliceTexture(){
     int iW = 16, iH = 8;
     for (int i = 0; i < 25; ++i){
@@ -194,7 +206,7 @@ void initSDL(){
         SDL_Quit();
         return;
     }
-    font = TTF_OpenFont("res/ttf/metal.ttf", 50);
+    font = TTF_OpenFont("res/ttf/electro.ttf", 100);
     if (font == NULL){
         logSDLError("TextLoad");
         return;
@@ -261,45 +273,6 @@ void initBrick(int x, int y, int w, int h, int brickColor){
 		brickTail = ptr;
 	}
 }
-void convertToList(){
-    while(!feof(maps[map])){
-        char temp;
-        temp = getc(maps[map]);
-        if (brickWidth == 0){
-            while(temp != (char)10){
-                brickWidth *= 10;
-                brickWidth += temp - '0';
-                temp = getc(maps[map]);
-            }
-            continue;
-        }
-        else if (brickHeight == 0){
-            while(temp != (char)10){
-                brickHeight *= 10;
-                brickHeight += temp - '0';
-                temp = getc(maps[map]);
-            }
-            continue;
-        }
-        if (mapNoY == 1){
-            mapNoX++;
-        }
-        if (temp == (char)10){
-            mapNoY++;
-        }
-        struct Node * ptr = (struct Node *)malloc(sizeof(struct Node));
-        ptr->data = temp;
-        if (nodeHead != NULL){
-            nodeHead->prev = ptr;
-        }
-        ptr->next = nodeHead;
-        ptr->prev = NULL;
-        nodeHead = ptr;
-        if (nodeTail == NULL){
-            nodeTail = ptr;
-        }
-    }
-}
 void setSpeed(struct Ball * ball){
     ball->velX = 2;
     ball->velY = -5;
@@ -330,6 +303,10 @@ void handleEvents(){
                     else if (gameState == pause){
                         gameState = game;
                     }
+                    break;
+                }
+                case SDLK_b:{
+                    initBall(bat->box.x + bat->box.w / 2 - ballSize / 2, bat->box.y - ballSize, ballSize, ballSize);
                     break;
                 }
                 case SDLK_SPACE:{
@@ -371,6 +348,9 @@ void loadMaps(){
     maps[2] = fopen("res/map/map2.txt", "r");
     maps[3] = fopen("res/map/map3.txt", "r");
     maps[4] = fopen("res/map/map4.txt", "r");
+    maps[20] = fopen("res/map/map20.txt", "r");
+    maps[21] = fopen("res/map/map21.txt", "r");
+    maps[22] = fopen("res/map/map22.txt", "r");
 }
 void loadTextures(){
     textures[0] = loadTexture("res/img/ball.png");
@@ -384,29 +364,106 @@ void loadTextures(){
 void scoreUp(){
     score += 100;
 }
+void convertToList(){
+    mapNoX = -1;
+    mapNoY = 1;
+    brickWidth = 0;
+    brickHeight = 0;
+    int ch;
+    while ((ch = fgetc(maps[map])) != EOF) {
+        if (brickWidth == 0){
+            while(ch != (char)10){
+                brickWidth *= 10;
+                brickWidth += ch - '0';
+                ch = fgetc(maps[map]);
+            }
+            continue;
+        }
+        else if (brickHeight == 0){
+            while(ch != (char)10){
+                brickHeight *= 10;
+                brickHeight += ch - '0';
+                ch = fgetc(maps[map]);
+            }
+            continue;
+        }
+        if (mapNoY == 1){
+            mapNoX++;
+        }
+        if (ch == (char)10){
+            mapNoY++;
+        }
+        struct Node * ptr = (struct Node *)malloc(sizeof(struct Node));
+        ptr->data = ch - '0';
+        if (nodeHead != NULL){
+            nodeHead->prev = ptr;
+        }
+        ptr->next = nodeHead;
+        ptr->prev = NULL;
+        nodeHead = ptr;
+        if (nodeTail == NULL){
+            nodeTail = ptr;
+        }
+    }
+}
 int dequeue(int n){
     int returnValue = 0;
-    struct Node * temp = nodeTail;
+    struct Node * temp = NULL;
     while (n > 0){
-        if (nodeTail->data == (char)10){
-            nodeTail = nodeTail->prev;
-            nodeTail->next = NULL;
-            returnValue = -1;
-            free(temp);
-            break;
+        temp = nodeTail;
+        if (temp->data >= 0){
+            returnValue *= 10;
+            returnValue += temp->data;
+            n--;
         }
-        if (nodeTail->next == NULL && nodeTail->prev == NULL){
-            free(nodeTail);
-            break;
-        }
-        returnValue *= 10;
-        returnValue += nodeTail->data - '0';
         nodeTail = nodeTail->prev;
-        nodeTail->next = NULL;
+        if (nodeTail != NULL){
+            nodeTail->next = NULL;
+        }
         free(temp);
-        n--;
+        if (nodeTail == NULL){
+            nodeHead = NULL;
+        }
     }
     return returnValue;
+}
+void generateMap(){
+    int brickInit = 0, iW = 0, iH = 0;
+    if(mapLevel == 1){
+        iW = SCREEN_WIDTH / (mapNoX + 1) / 2;
+        iH = status->box.h + SCREEN_HEIGHT / (mapNoX + 1) / 2;
+    }
+    else if (mapLevel == 3){
+        mapNoX = mapNoX / 3;
+        iW = 0;
+        iH = status->box.h;
+    }
+    brickColor = rand() % 25;
+    for (int i = 0;i < mapNoX * mapNoY; i++){
+        brickInit = dequeue(mapLevel);
+        if (mapLevel == 3){
+            if (brickInit / 100 == 1){
+                initBrick(iW, iH, brickWidth, brickHeight, brickInit - 100);
+            }
+            iW += SCREEN_WIDTH / (mapNoX);
+            if(iW > SCREEN_WIDTH / mapNoX / 5 * 100){
+                brickColor = rand() % 25;
+                iW = 0;
+                iH += SCREEN_HEIGHT / mapNoY / 2;
+            }
+        }
+        if (mapLevel == 1){
+            if (brickInit == 1){
+                initBrick(iW, iH, brickWidth, brickHeight, brickColor);
+            }
+            iW += SCREEN_WIDTH / (mapNoX + 1);
+            if(iW > SCREEN_WIDTH / (mapNoX + 1) / 10 * 95){
+                brickColor = rand() % 25;
+                iW = SCREEN_WIDTH / (mapNoX + 1) / 2;
+                iH += SCREEN_HEIGHT / (mapNoY + 1) / 2;
+            }
+        }
+    }
 }
 void deleteBrick(struct Brick * brick){
     if (brick->next == NULL && brick->prev == NULL){
@@ -729,6 +786,15 @@ void update(){
             collisionCorrection(temp);
             temp = temp->next;
         }
+         if (brickHead == NULL){
+            while (ballHead != NULL){
+                deleteBall(ballHead);
+            }
+            map++;
+            convertToList();
+            generateMap();
+            initBall(bat->box.x + bat->box.w / 2 - ballSize / 2, bat->box.y - ballSize, ballSize, ballSize);
+        }
         moveBat();
     }
     if (gameState == pause){
@@ -742,6 +808,7 @@ void render(){
     }
     if (gameState == game || gameState == pause){
         renderTextureScale(status->pic, status->box.x, status->box.y, status->box.w, status->box.h);
+        renderFont(font, "Lives:", 150, 150, 255, 255, 50, 0, 150, 50);
         renderTextureScale(screen->pic, screen->box.x, screen->box.y, screen->box.w, screen->box.h);
         struct Brick * temp = brickHead;
         while (temp != NULL){
@@ -767,48 +834,10 @@ void initEverything(){
     loadTextures();
     sliceTexture(textures[5]);
     loadMaps();
-    convertToList();
     initStatus();
     initGameScreen();
-    int brickInit = 0, iW, iH;
-    if(mapLevel == 1){
-        iW = SCREEN_WIDTH / (mapNoX + 1) / 2;
-        iH = status->box.h + SCREEN_HEIGHT / (mapNoX + 1) / 4;
-    }
-    else if (mapLevel == 3){
-        mapNoX = mapNoX / 3;
-        iW = SCREEN_WIDTH / (mapNoX + 5) / 2 * 5;
-        iH = status->box.h + SCREEN_HEIGHT / (mapNoX + 5) / 4;
-    }
-    brickColor = rand() % 25;
-    while (nodeTail->prev != NULL){
-        brickInit = dequeue(mapLevel);
-        if (mapLevel == 3){
-            if (brickInit == -1){
-                brickInit = dequeue(mapLevel);
-            }
-            if (brickInit / 100 == 1){
-                initBrick(iW, iH, brickWidth, brickHeight, brickInit - 100);
-            }
-            iW += SCREEN_WIDTH / (mapNoX + 5);
-            if(iW > SCREEN_WIDTH / (mapNoX + 5) / 4 * 90){
-                brickColor = rand() % 25;
-                iW = SCREEN_WIDTH / (mapNoX + 5) / 2 * 5;
-                iH += SCREEN_HEIGHT / (mapNoY + 5) / 2;
-            }
-        }
-        if (mapLevel == 1){
-            if (brickInit == 1){
-                initBrick(iW, iH, brickWidth, brickHeight, brickColor);
-            }
-            iW += SCREEN_WIDTH / (mapNoX + 1);
-            if(iW > SCREEN_WIDTH / (mapNoX + 1) / 4 * 38){
-                brickColor = rand() % 25;
-                iW = SCREEN_WIDTH / (mapNoX + 1) / 2;
-                iH += SCREEN_HEIGHT / (mapNoY + 1) / 3;
-            }
-        }
-    }
+    convertToList();
+    generateMap();
     initBat();
     initBall(bat->box.x + bat->box.w / 2 - ballSize / 2, bat->box.y - ballSize, ballSize, ballSize);
 }
