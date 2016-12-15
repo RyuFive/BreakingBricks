@@ -10,8 +10,6 @@ lives up
 lives down
 reversed controls
 gun paddle
-split balls
 hyper balls
 score up
 score down
-visibility pulse
