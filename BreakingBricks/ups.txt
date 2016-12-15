@@ -1,0 +1,17 @@
+ball speed up
+ball speed down
+ball size up
+ball size down
+bat speed up
+bat speed down
+bat size up
+bat size down
+lives up
+lives down
+reversed controls
+gun paddle
+split balls
+hyper balls
+score up
+score down
+visibility pulse

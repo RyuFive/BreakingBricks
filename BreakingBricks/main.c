@@ -27,7 +27,7 @@ int score = 0;
 int framesPassed = 0;
 float frequency = 10;
 float waitTime;
-int ballSize = 32;
+int ballSize = 20;
 int batSize = 200;
 int batSpeed = 8;
 int brickWidth = 0;
@@ -36,6 +36,9 @@ int brickColor = 0;
 int mapNoX = -1;
 int mapNoY = 1;
 int lives = 3;
+int objects = 0;
+bool rev = false;
+char buff[8];
 enum states {game, pause, menu, options, help};
 enum states gameState = game;
 
@@ -69,6 +72,15 @@ struct Brick{
     struct Brick * next;
     struct Brick * prev;
 };
+struct Powerup{
+    SDL_Rect box;
+    int velX;
+    int velY;
+    int ability;
+    SDL_Texture * pic;
+    struct Powerup * next;
+    struct Powerup * prev;
+};
 struct Node{
     int data;
     struct Node * next;
@@ -82,6 +94,8 @@ struct Brick * brickTail = NULL;
 struct Ball * ballHead = NULL;
 struct Ball * ballTail = NULL;
 struct Bat * bat = NULL;
+struct Powerup * powerupHead = NULL;
+struct Powerup * powerupTail = NULL;
 struct Screen * screen = NULL;
 struct Status * status = NULL;
 
@@ -139,16 +153,18 @@ void renderTextureClip(SDL_Texture * texture, int x, int y, int w, int h, SDL_Re
     rect.h = h;
     SDL_RenderCopy(renderer, texture, clips, &rect);
 }
-void renderFont(TTF_Font * font, char * msg, int r, int g, int b, int a, int x, int y, int w, int h){
+void renderFont(TTF_Font * font, char * msg, int r, int g, int b, int a, int x, int y){
     SDL_Rect rect;
     rect.x = x;
     rect.y = y;
-    rect.w = w;
-    rect.h = h;
     SDL_Color color = {r, g, b, a};
     SDL_Surface * surface = TTF_RenderText_Solid(font, msg, color);
     SDL_Texture * texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_SetTextureAlphaMod(texture, a);
+    SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
     SDL_RenderCopy(renderer, texture, NULL, &rect);
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(texture);
 }
 void sliceTexture(){
     int iW = 16, iH = 8;
@@ -190,6 +206,7 @@ void initBall(int x, int y, int w, int h){
 	if (ballTail == NULL){
 		ballTail = ptr;
 	}
+	objects++;
 }
 void initSDL(){
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -206,7 +223,7 @@ void initSDL(){
         SDL_Quit();
         return;
     }
-    font = TTF_OpenFont("res/ttf/electro.ttf", 100);
+    font = TTF_OpenFont("res/ttf/electro.ttf", 46);
     if (font == NULL){
         logSDLError("TextLoad");
         return;
@@ -238,6 +255,7 @@ void initBat(){
     bat->move[2] = 0;
     bat->move[3] = 0;
     bat->pic = textures[1];
+    objects++;
 }
 void initGameScreen(){
     screen = (struct Screen *)malloc(sizeof(struct Screen));
@@ -246,6 +264,7 @@ void initGameScreen(){
     screen->box.w = SCREEN_WIDTH;
     screen->box.h = SCREEN_HEIGHT - status->box.h;
     screen->pic = textures[3];
+    objects++;
 }
 void initStatus(){
     status = (struct Status *)malloc(sizeof(struct Status));
@@ -254,6 +273,28 @@ void initStatus(){
     status->box.w = SCREEN_WIDTH;
     status->box.h = 50;
     status->pic = textures[6];
+    objects++;
+}
+void initPowerup(int x, int y, int w, int h, int ability){
+    struct Powerup * ptr = (struct Powerup *)malloc(sizeof(struct Powerup));
+	ptr->box.x = x-w/2;
+    ptr->box.y = y;
+    ptr->box.w = w;
+    ptr->box.h = h;
+    ptr->velX = 0;
+    ptr->velY = 1;
+    ptr->ability = ability;
+    ptr->pic = textures[7];
+	if (powerupHead != NULL){
+		powerupHead->prev = ptr;
+	}
+	ptr->next = powerupHead;
+	ptr->prev = NULL;
+	powerupHead = ptr;
+	if (powerupTail == NULL){
+		powerupTail = ptr;
+	}
+	objects++;
 }
 void initBrick(int x, int y, int w, int h, int brickColor){
     struct Brick * ptr = (struct Brick *)malloc(sizeof(struct Brick));
@@ -272,10 +313,11 @@ void initBrick(int x, int y, int w, int h, int brickColor){
 	if (brickTail == NULL){
 		brickTail = ptr;
 	}
+	objects++;
 }
 void setSpeed(struct Ball * ball){
-    ball->velX = 2;
-    ball->velY = -5;
+    ball->velX = 1;
+    ball->velY = -3;
 }
 void handleEvents(){
     while (SDL_PollEvent(&event)){
@@ -285,11 +327,21 @@ void handleEvents(){
         if (event.type == SDL_KEYDOWN){
             switch(event.key.keysym.sym){
                 case SDLK_LEFT:{
-                    bat->move[2] = bat->speed;
+                    if (!rev){
+                        bat->move[2] = bat->speed;
+                    }
+                    else{
+                        bat->move[3] = bat->speed;
+                    }
                     break;
                 }
                 case SDLK_RIGHT:{
-                    bat->move[3] = bat->speed;
+                    if (!rev){
+                        bat->move[3] = bat->speed;
+                    }
+                    else{
+                        bat->move[2] = bat->speed;
+                    }
                     break;
                 }
                 case SDLK_x:{
@@ -307,6 +359,10 @@ void handleEvents(){
                 }
                 case SDLK_b:{
                     initBall(bat->box.x + bat->box.w / 2 - ballSize / 2, bat->box.y - ballSize, ballSize, ballSize);
+                    break;
+                }
+                case SDLK_a:{
+                    printf("No. of objects are: %d\n", objects);
                     break;
                 }
                 case SDLK_SPACE:{
@@ -360,6 +416,141 @@ void loadTextures(){
     textures[4] = loadTexture("res/img/pause.png");
     textures[5] = loadTexture("res/img/bricks.png");
     textures[6] = loadTexture("res/img/status.png");
+    textures[7] = loadTexture("res/img/powerup.png");
+}
+void timer(int selection){
+}
+void applyPowerup(int ability){
+    switch(ability){
+        case 0:{
+            printf("Ball Speed UP\n");
+            struct Ball * temp = ballHead;
+            while(temp != NULL){
+                if(temp->velX > 0){
+                    temp->velX++;
+                }
+                else{
+                    temp->velX--;
+                }
+                if(temp->velY > 0){
+                    temp->velY++;
+                }
+                else{
+                    temp->velY--;
+                }
+                temp = temp->next;
+            }
+            break;
+        }
+        case 1:{
+            printf("Ball Speed DOWN\n");
+            struct Ball * temp = ballHead;
+            while(temp != NULL){
+                if(temp->velX > 1){
+                    temp->velX--;
+                }
+                else if (temp->velX < -1){
+                    temp->velX++;
+                }
+                if(temp->velY > 1){
+                    temp->velY--;
+                }
+                else if (temp->velY < -1){
+                    temp->velY++;
+                }
+                temp = temp->next;
+            }
+            break;
+        }
+        case 2:{
+            printf("Ball Size UP\n");
+            struct Ball * temp = ballHead;
+            while(temp != NULL){
+                temp->box.w += 2;
+                temp->box.h += 2;
+                temp = temp->next;
+            }
+            break;
+        }
+        case 3:{
+            printf("Ball Size DOWN\n");
+            struct Ball * temp = ballHead;
+            while(temp != NULL){
+                if (temp->box.w > 8){
+                    temp->box.w -= 2;
+                    temp->box.h -= 2;
+                }
+                temp = temp->next;
+            }
+            break;
+        }
+        case 4:{
+            printf("Bat Speed UP\n");
+            bat->speed *= 1.25;
+            break;
+        }
+        case 5:{
+            printf("Bat Speed DOWN\n");
+            if (bat->speed > 4){
+                bat->speed *= 0.75;
+            }
+            break;
+        }
+        case 6:{
+            printf("Bat Size UP\n");
+            bat->box.w += 50;
+            break;
+        }
+        case 7:{
+            printf("Bat Size DOWN\n");
+            if (bat->box.w > 100){
+                bat->box.w -= 50;
+            }
+            break;
+        }
+        case 8:{
+            printf("Lives UP\n");
+            lives++;
+            break;
+        }
+        case 9:{
+            printf("Lives DOWN\n");
+            lives--;
+            break;
+        }
+        case 10:{
+//            reversed controls
+            printf("Reversing Controls\n");
+            rev = true;
+//            timer(1);
+            break;
+        }
+        case 11:{
+//            gun paddle
+            printf("Gun Paddle\n");
+            break;
+        }
+        case 12:{
+//            split balls
+            printf("Split Balls\n");
+            break;
+        }
+        case 13:{
+//            hyper balls
+            printf("Hyper Balls\n");
+            break;
+        }
+        case 14:{
+            printf("Score UP\n");
+            score += 1000;
+            break;
+        }
+        case 15:{
+            printf("Score DOWN\n");
+            score -= 1000;
+            break;
+        }
+    }
 }
 void scoreUp(){
     score += 100;
@@ -465,7 +656,13 @@ void generateMap(){
         }
     }
 }
+void randomPowerup(struct Brick * brick){
+    if (rand() % 100 < 15){
+        initPowerup(brick->box.x + brick->box.w / 2, brick->box.y, 32, 32, rand() % 16);
+    }
+}
 void deleteBrick(struct Brick * brick){
+    randomPowerup(brick);
     if (brick->next == NULL && brick->prev == NULL){
         brickHead = NULL;
     }
@@ -482,22 +679,59 @@ void deleteBrick(struct Brick * brick){
     }
     scoreUp();
     free(brick);
+    objects--;
+}
+void deletePowerup(struct Powerup * powerup){
+    if (powerup->next == NULL && powerup->prev == NULL){
+        powerupHead = NULL;
+        powerupTail = NULL;
+    }
+    else if (powerup->next == NULL){
+        powerupTail = powerup->prev;
+        powerupTail->next = NULL;
+    }
+    else if (powerup->prev == NULL){
+        powerupHead = powerup->next;
+        powerupHead->prev = NULL;
+    }
+    else{
+        powerup->prev->next = powerup->next;
+        powerup->next->prev = powerup->prev;
+    }
+    free(powerup);
+    objects--;
 }
 void deleteBall(struct Ball * ball){
     if (ball->next == NULL && ball->prev == NULL){
         ballHead = NULL;
         ballTail = NULL;
-        free(ball);
     }
     else if (ball->next == NULL){
         ballTail = ball->prev;
         ballTail->next = NULL;
-        free(ball);
     }
     else if (ball->prev == NULL){
         ballHead = ball->next;
         ballHead->prev = NULL;
-        free(ball);
+    }
+    else{
+        ball->prev->next = ball->next;
+        ball->next->prev = ball->prev;
+    }
+    free(ball);
+    objects--;
+}
+void movePowerup(struct Powerup * powerup){
+    powerup->box.x += powerup->velX;
+    powerup->box.y += powerup->velY;
+}
+void collisionPowerup(struct Powerup * powerup){
+    if (SDL_HasIntersection(&(powerup->box), &(bat->box))){
+        applyPowerup(powerup->ability);
+        deletePowerup(powerup);
+    }
+    if (powerup->box.y >= screen->box.h + status->box.h){
+        deletePowerup(powerup);
     }
 }
 bool checkAlready(struct Ball * ball){
@@ -682,9 +916,9 @@ void collisionWalls(struct Ball * ball){
         ball->velY = ball->velY * -1;
     }
     if (ball->box.y >= screen->box.h + status->box.h){
-        updateLives(-1);
         deleteBall(ball);
-        if (lives > 0){
+        if (lives > 0 && ballHead == NULL){
+            updateLives(-1);
             initBall(bat->box.x + bat->box.w / 2 - ballSize / 2, bat->box.y - ballSize, ballSize, ballSize);
         }
     }
@@ -742,7 +976,7 @@ void speedUpBallWithTime(struct Ball * ball){
     }
 }
 void moveBall(struct Ball * ball){
-    speedUpBallWithTime(ball);
+//    speedUpBallWithTime(ball);
     if (bat->ball == ball){
         ball->box.x = bat->box.x + bat->box.w / 2 - ballSize / 2;
         ball->box.y = bat->box.y - ballSize;
@@ -760,8 +994,7 @@ void moveBat(){
     bat->box.x += bat->move[3];
 }
 void correctVel(struct Ball * ball){
-    if (bat->ball == NULL){
-
+    if (bat->ball != NULL){
         while(ball->velY == 0){
             ball->velY = rand() % 3 - 1;
         }
@@ -776,29 +1009,33 @@ void fps(float frequency){
 void update(){
     fps(frequency);
     if (gameState == menu){
-
     }
     if (gameState == game){
-
         struct Ball * temp = ballHead;
         while (temp != NULL){
             moveBall(temp);
             collisionCorrection(temp);
             temp = temp->next;
         }
-         if (brickHead == NULL){
+        struct Powerup * temp2 = powerupHead;
+        while (temp2 != NULL){
+            movePowerup(temp2);
+            collisionPowerup(temp2);
+            temp2 = temp2->next;
+        }
+        if (brickHead == NULL){
             while (ballHead != NULL){
                 deleteBall(ballHead);
             }
             map++;
             convertToList();
             generateMap();
+            lives++;
             initBall(bat->box.x + bat->box.w / 2 - ballSize / 2, bat->box.y - ballSize, ballSize, ballSize);
         }
         moveBat();
     }
     if (gameState == pause){
-
     }
 }
 void render(){
@@ -808,7 +1045,10 @@ void render(){
     }
     if (gameState == game || gameState == pause){
         renderTextureScale(status->pic, status->box.x, status->box.y, status->box.w, status->box.h);
-        renderFont(font, "Lives:", 150, 150, 255, 255, 50, 0, 150, 50);
+        sprintf(buff, "Lives: %d", lives);
+        renderFont(font, buff, 150, 150, 255, 200, 1100, 0);
+        sprintf(buff, "Score: %d", score);
+        renderFont(font, buff, 150, 150, 255, 200, 80, 0);
         renderTextureScale(screen->pic, screen->box.x, screen->box.y, screen->box.w, screen->box.h);
         struct Brick * temp = brickHead;
         while (temp != NULL){
@@ -820,6 +1060,11 @@ void render(){
         while (temp2 != NULL){
             renderTextureScale(temp2->pic, temp2->box.x, temp2->box.y, temp2->box.w, temp2->box.h);
             temp2 = temp2->next;
+        }
+        struct Powerup * temp3 = powerupHead;
+        while (temp3 != NULL){
+            renderTextureScale(temp3->pic, temp3->box.x, temp3->box.y, temp3->box.w, temp3->box.h);
+            temp3 = temp3->next;
         }
     }
     if (gameState == pause){
@@ -848,6 +1093,9 @@ void killEverything(){
     for(int i=0; maps[i] != NULL; i++){
         fclose(maps[i]);
     }
+    free(screen);
+    free(status);
+    free(bat);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     TTF_CloseFont(font);
